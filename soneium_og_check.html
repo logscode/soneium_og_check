@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>NFT 个数批量查询</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #4CAF50;
+        }
+        
+        .container {
+            display: flex;
+            gap: 20px;
+            height: calc(100vh - 150px);
+            min-height: 600px;
+        }
+        
+        .column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        h2 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 18px;
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        textarea {
+            width: calc(100% - 30px);
+            flex: 1;
+            margin-bottom: 10px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            resize: none;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            background-color: #fff;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+        }
+        
+        textarea:read-only {
+            background-color: #f8f8f8;
+        }
+        
+        .button-container {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            align-items: center;
+        }
+        
+        .thread-config {
+            margin: 0;
+        }
+        
+        button {
+            min-width: 120px;
+            padding: 12px 30px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:active {
+            transform: translateY(1px);
+        }
+        
+        #status {
+            text-align: center;
+            margin-top: 10px;
+            color: #666;
+            font-size: 14px;
+            padding: 8px;
+            border-radius: 4px;
+            background-color: #f8f8f8;
+        }
+        
+        /* 自定义滚动条样式 */
+        textarea::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        textarea::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        textarea::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        textarea::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+        
+        /* 确保地址和数值对齐 */
+        textarea {
+            font-family: 'Consolas', monospace;
+            white-space: pre;
+            overflow-wrap: normal;
+            overflow-x: auto;
+        }
+        
+        /* 响应式布局 */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                height: auto;
+            }
+            .button-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .thread-config {
+                margin-bottom: 10px;
+            }
+        }
+        
+        /* 添加加载动画 */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 美化结果显示 */
+        .result-row {
+            padding: 8px;
+            margin: 4px 0;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        
+        .result-row:hover {
+            background-color: #f5f5f5;
+        }
+        
+        /* 进度条样式 */
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        button.pause {
+            background-color: #ff9800;
+        }
+        
+        button.pause:hover {
+            background-color: #f57c00;
+        }
+        
+        button.retry {
+            background-color: #2196F3;
+        }
+        
+        button.retry:hover {
+            background-color: #1976D2;
+        }
+        
+        .failed-addresses {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #f44336;
+        }
+        
+        .instructions {
+            max-width: 1600px;
+            margin: 0 auto 30px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .instructions h3 {
+            color: #333;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .instructions ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+            color: #666;
+            line-height: 1.5;
+        }
+        
+        .instructions code {
+            background-color: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Soneium OG Badge批量查询</h1>
+    
+    <div class="instructions">
+        <ul>
+            <li>并发查询：可设置并发数（1-50），建议设置为 10-20，避免请求过于频繁</li>
+            <li>请确保输入的地址格式正确，查询结果会实时显示在右侧文本框中，失败的地址将在下一轮自动重试</li>
+        </ul>
+    </div>
+    
+    <div class="container">
+        <div class="column">
+            <h2>输入地址（每行一个）</h2>
+            <textarea id="addresses" placeholder="请输入要查询的地址，每行一个&#13;&#10;例如：&#13;&#10;0x1234...5678&#13;&#10;0xabcd...efgh"></textarea>
+            <div class="button-container">
+                <div class="thread-config">
+                    <label for="threadCount">并发查询数量：</label>
+                    <input type="number" id="threadCount" min="1" max="50" value="10">
+                </div>
+                <div class="control-buttons">
+                    <button onclick="checkBalances()" id="queryButton">查询个数</button>
+                    <button onclick="togglePause()" id="pauseButton" class="pause" style="display: none;">暂停</button>
+                    <button onclick="retryFailed()" id="retryButton" class="retry" style="display: none;">重试失败</button>
+                    <button onclick="exportToCSV()" id="exportButton">导出CSV</button>
+                </div>
+            </div>
+            <div id="status">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressBar"></div>
+                </div>
+                <span id="statusText"></span>
+                <span id="loadingIndicator" class="loading" style="display: none;"></span>
+            </div>
+        </div>
+        <div class="column">
+            <h2>普通OG个数</h2>
+            <textarea id="token0Results" readonly></textarea>
+        </div>
+        <div class="column">
+            <h2>黄金OG个数</h2>
+            <textarea id="token1Results" readonly></textarea>
+        </div>
+    </div>
+
+    <script>
+        const CONTRACT_ADDRESS = '0x2A21B17E366836e5FFB19bd47edB03b4b551C89d';
+        const RPC_URL = 'https://rpc.soneium.org/';
+        
+        // ERC1155 ABI
+        const ERC1155_ABI = [
+            {
+                "constant": true,
+                "inputs": [
+                    {"name": "account", "type": "address"},
+                    {"name": "id", "type": "uint256"}
+                ],
+                "name": "balanceOf",
+                "outputs": [{"name": "", "type": "uint256"}],
+                "payable": false,
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        let isPaused = false;
+        let isQuerying = false;
+        let failedAddresses = new Set();
+        
+        function togglePause() {
+            isPaused = !isPaused;
+            const pauseButton = document.getElementById('pauseButton');
+            pauseButton.textContent = isPaused ? '继续' : '暂停';
+            if (!isPaused) {
+                continueProcessing();
+            }
+        }
+        
+        async function retryFailed() {
+            if (failedAddresses.size === 0) {
+                alert('没有失败的地址需要重试');
+                return;
+            }
+            
+            const addresses = Array.from(failedAddresses);
+            failedAddresses.clear();
+            
+            // 保存当前结果
+            const token0Results = document.getElementById('token0Results');
+            const token1Results = document.getElementById('token1Results');
+            const previousToken0Results = token0Results.value;
+            const previousToken1Results = token1Results.value;
+            
+            await checkBalances(addresses);
+            
+            // 将重试结果添加到之前的结果中
+            token0Results.value = previousToken0Results + token0Results.value;
+            token1Results.value = previousToken1Results + token1Results.value;
+        }
+        
+        async function checkBalances(addressList = null) {
+            if (isQuerying) {
+                alert('正在查询中，请等待当前查询完成或点击暂停');
+                return;
+            }
+            
+            const addressesText = addressList || document.getElementById('addresses').value;
+            const addresses = Array.isArray(addressesText) ? addressesText : addressesText.split('\n').filter(addr => addr.trim());
+            const threadCount = parseInt(document.getElementById('threadCount').value) || 10;
+            
+            if (addresses.length === 0) {
+                alert('请输入至少一个地址');
+                return;
+            }
+
+            isQuerying = true;
+            isPaused = false;
+            
+            const queryButton = document.getElementById('queryButton');
+            const pauseButton = document.getElementById('pauseButton');
+            const retryButton = document.getElementById('retryButton');
+            
+            queryButton.disabled = true;
+            pauseButton.style.display = 'inline-block';
+            retryButton.style.display = 'none';
+            
+            const token0Results = document.getElementById('token0Results');
+            const token1Results = document.getElementById('token1Results');
+            const statusText = document.getElementById('statusText');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const progressBar = document.getElementById('progressBar');
+
+            // 只有在不是重试模式时才清空结果
+            if (!addressList) {
+                token0Results.value = '';
+                token1Results.value = '';
+            }
+            
+            loadingIndicator.style.display = 'inline-block';
+            
+            try {
+                const web3 = new Web3(RPC_URL);
+                const contract = new web3.eth.Contract(ERC1155_ABI, CONTRACT_ADDRESS);
+                let processed = 0;
+
+                const batchSize = Math.ceil(addresses.length / threadCount);
+                const batches = [];
+                for (let i = 0; i < addresses.length; i += batchSize) {
+                    batches.push(addresses.slice(i, i + batchSize));
+                }
+
+                async function processBatch(batchAddresses) {
+                    for (const address of batchAddresses) {
+                        while (isPaused) {
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        }
+                        
+                        try {
+                            const cleanAddress = address.trim();
+                            if (!web3.utils.isAddress(cleanAddress)) {
+                                failedAddresses.add(address);
+                                updateResults(cleanAddress, '无效地址', '无效地址');
+                                continue;
+                            }
+
+                            const [balance0, balance1] = await Promise.all([
+                                contract.methods.balanceOf(cleanAddress, 0).call(),
+                                contract.methods.balanceOf(cleanAddress, 1).call()
+                            ]);
+
+                            updateResults(cleanAddress, balance0, balance1);
+                            processed++;
+                            updateProgress(processed, addresses.length);
+                        } catch (err) {
+                            failedAddresses.add(address);
+                            updateResults(address, '查询失败', '查询失败');
+                            console.error(`查询地址 ${address} 失败:`, err);
+                        }
+                    }
+                }
+
+                await Promise.all(batches.map(batch => processBatch(batch)));
+                
+                updateStatus(`查询完成，共处理 ${processed} 个地址${failedAddresses.size > 0 ? `，${failedAddresses.size} 个失败` : ''}`);
+            } catch (err) {
+                console.error('查询过程出错:', err);
+                updateStatus('查询失败: ' + err.message);
+            } finally {
+                isQuerying = false;
+                queryButton.disabled = false;
+                pauseButton.style.display = 'none';
+                if (failedAddresses.size > 0) {
+                    retryButton.style.display = 'inline-block';
+                    await retryFailed();
+                }
+                document.getElementById('loadingIndicator').style.display = 'none';
+            }
+        }
+        
+        function updateProgress(processed, total) {
+            const progress = (processed / total) * 100;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+            document.getElementById('statusText').textContent = `进度: ${processed}/${total}`;
+        }
+        
+        function updateStatus(message) {
+            document.getElementById('statusText').textContent = message;
+        }
+
+        function updateResults(address, balance0, balance1) {
+            const token0Results = document.getElementById('token0Results');
+            const token1Results = document.getElementById('token1Results');
+            
+            token0Results.value += `${address}: ${balance0}\n`;
+            token1Results.value += `${address}: ${balance1}\n`;
+            
+            // 自动滚动到底部
+            token0Results.scrollTop = token0Results.scrollHeight;
+            token1Results.scrollTop = token1Results.scrollHeight;
+        }
+
+        function exportToCSV() {
+            const token0Results = document.getElementById('token0Results').value;
+            const token1Results = document.getElementById('token1Results').value;
+            
+            // 将结果按行分割并过滤空行
+            const token0Lines = token0Results.trim().split('\n');
+            const token1Lines = token1Results.trim().split('\n');
+            
+            // 创建CSV内容，添加表头
+            let csvContent = "地址,普通OG数量,黄金OG数量\n";
+            
+            // 使用 Map 存储结果，以防止重复
+            const resultsMap = new Map();
+            
+            // 处理所有结果
+            for (let i = 0; i < Math.max(token0Lines.length, token1Lines.length); i++) {
+                if (token0Lines[i]) {
+                    const [address0, balance0] = token0Lines[i].split(':').map(s => s.trim());
+                    const [_, balance1] = (token1Lines[i] || '').split(':').map(s => s.trim());
+                    resultsMap.set(address0, { balance0, balance1: balance1 || '0' });
+                }
+            }
+            
+            // 将 Map 转换为 CSV 行
+            for (const [address, balances] of resultsMap) {
+                csvContent += `${address},${balances.balance0},${balances.balance1}\n`;
+            }
+            
+            // 创建并下载 CSV 文件
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", "og_badges_results.csv");
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html> 
