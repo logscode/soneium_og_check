@@ -24,7 +24,6 @@ A web-based tool for batch querying Soneium OG Badge balances. This tool allows 
 ### Technical Details
 - Built with pure HTML/JavaScript
 - Uses Web3.js for blockchain interaction
-- Supports MetaMask connection
 - Implements rate limiting to prevent overload
 
 ## 中文
@@ -49,7 +48,6 @@ A web-based tool for batch querying Soneium OG Badge balances. This tool allows 
 ### 技术细节
 - 纯 HTML/JavaScript 构建
 - 使用 Web3.js 进行区块链交互
-- 支持 MetaMask 连接
 - 实现请求限制防止过载
 
 ---
